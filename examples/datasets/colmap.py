@@ -49,9 +49,10 @@ class Parser:
         ), f"COLMAP directory {colmap_dir} does not exist."
 
         manager = SceneManager(colmap_dir)
-        manager.load_cameras()
-        manager.load_images()
-        manager.load_points3D()
+        # manager.load_cameras()
+        # manager.load_images()
+        # manager.load_points3D()
+        manager.load()
 
         # Extract extrinsic matrices in world-to-camera format.
         imdata = manager.images
@@ -170,7 +171,7 @@ class Parser:
         points = manager.points3D.astype(np.float32)
         points_err = manager.point3D_errors.astype(np.float32)
         points_rgb = manager.point3D_colors.astype(np.uint8)
-        point_indices = dict()
+        point_indices = dict()  # image_name -> [3D_points_idx...]
 
         image_id_to_name = {v: k for k, v in manager.name_to_image_id.items()}
         for point_id, data in manager.point3D_id_to_images.items():
@@ -408,7 +409,34 @@ if __name__ == "__main__":
         image = data["image"].numpy().astype(np.uint8)
         points = data["points"].numpy()
         depths = data["depths"].numpy()
-        for x, y in points:
+
+        for i, (x, y) in enumerate(points):
             cv2.circle(image, (int(x), int(y)), 2, (255, 0, 0), -1)
+
         writer.append_data(image)
     writer.close()
+
+    # writer = imageio.get_writer("results/depths.mp4", fps=30)
+    # for data in tqdm.tqdm(dataset, desc="Plotting depths"):
+    #     image = data["image"].numpy().astype(np.uint8)
+    #     depths = data["depths"].numpy()
+
+    #     height, width = image.shape[:2]
+
+    #     depth_image = np.zeros((height, width, 1), dtype=np.float32)
+
+    #     for i, (x, y) in enumerate(data["points"].numpy()):
+    #         depth_image[int(y), int(x)] = depths[i]
+
+    #     depth_image = (depth_image - np.min(depth_image)) / (
+    #         np.max(depth_image) - np.min(depth_image)
+    #     )
+
+    #     depth_image = (depth_image * 255).astype(np.uint8)
+
+    #     canvas_list = [
+    #         torch.from_numpy(image),
+    #         torch.from_numpy(depth_image.repeat(3, axis=2)),
+    #     ]
+    #     canvas = torch.cat(canvas_list, dim=0).cpu().numpy()
+    #     writer.append_data(canvas)

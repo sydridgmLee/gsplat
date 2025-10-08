@@ -35,6 +35,8 @@ from lib_bilagrid import (
     total_variation_loss,
 )
 
+from PIL import Image
+
 from gsplat.distributed import cli
 from gsplat.rendering import rasterization
 from gsplat.strategy import DefaultStrategy
@@ -106,7 +108,7 @@ class Config:
     # strategy: Union[DefaultStrategy, MCMCStrategy] = field(
     #     default_factory=DefaultStrategy
     # )
-    strategy: DefaultStrategy = DefaultStrategy(verbose=True)
+    strategy: DefaultStrategy = field(default_factory=DefaultStrategy)
     # Use packed mode for rasterization, this leads to less memory usage but slightly slower.
     packed: bool = False
     # Use sparse gradients for optimization. (experimental)
@@ -137,7 +139,7 @@ class Config:
     # Dump information to tensorboard every this steps
     tb_every: int = 100
     # Save training images to tensorboard
-    tb_save_image: bool = False
+    tb_save_image: bool = True
 
     lpips_net: Literal["vgg", "alex"] = "alex"
 
@@ -481,6 +483,9 @@ class Runner:
                 depthloss = F.l1_loss(disp, disp_gt) * self.scene_scale
                 loss += depthloss * cfg.depth_lambda
 
+            for optimizer in self.optimizers.values():
+                optimizer.zero_grad(set_to_none=True)
+
             loss.backward()
 
             desc = f"loss={loss.item():.3f}| " f"sh degree={sh_degree_to_use}| "
@@ -506,12 +511,16 @@ class Runner:
                 self.writer.add_scalar("train/mem", mem, step)
                 if cfg.depth_loss:
                     self.writer.add_scalar("train/depthloss", depthloss.item(), step)
-                if cfg.use_bilateral_grid:
-                    self.writer.add_scalar("train/tvloss", tvloss.item(), step)
                 if cfg.tb_save_image:
                     canvas = torch.cat([pixels, colors], dim=2).detach().cpu().numpy()
                     canvas = canvas.reshape(-1, *canvas.shape[2:])
-                    self.writer.add_image("train/render", canvas, step)
+
+                    self.writer.add_image(
+                        "train/render",
+                        (canvas * 255).astype(np.uint8),
+                        global_step=step,
+                        dataformats="HWC",
+                    )
                 self.writer.flush()
 
             # save checkpoint before updating the model
@@ -537,7 +546,6 @@ class Runner:
             # optimize
             for optimizer in self.optimizers.values():
                 optimizer.step()
-                optimizer.zero_grad(set_to_none=True)
 
             for scheduler in schedulers:
                 scheduler.step()
@@ -719,6 +727,7 @@ class Runner:
             canvas = torch.cat(canvas_list, dim=2).squeeze(0).cpu().numpy()
             canvas = (canvas * 255).astype(np.uint8)
             writer.append_data(canvas)
+
         writer.close()
         print(f"Video saved to {video_dir}/traj_{step}.mp4")
 

@@ -9,3 +9,6 @@ train-simple:
 	CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer.py default \
     --data_dir data/360_v2/stump/ --data_factor 4 \
     --result_dir ./results/stump
+
+launch-tensorboard:
+	tensorboard --logdir ./results
