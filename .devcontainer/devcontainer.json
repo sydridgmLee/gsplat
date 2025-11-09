@@ -1,0 +1,27 @@
+{
+	"name": "gsplat GPU Development",
+	
+	// Use NVIDIA PyTorch container with CUDA support
+	"image": "gsplat:latest",
+	
+	// GPU support - enables all GPUs
+	"runArgs": [
+		"--gpus=all",
+		// "--ipc=host",
+		"--network=host"
+	],
+	
+	// Mounts
+	// "mounts": [
+	// 	"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+	// ],
+	
+	// Environment variables
+	"containerEnv": {
+		// "DISPLAY": "${localEnv:DISPLAY}",
+		// "NVIDIA_VISIBLE_DEVICES": "all",
+		// "NVIDIA_DRIVER_CAPABILITIES": "all"
+		// "HTTP_PROXY": "http://127.0.0.1:8907/",
+		// "HTTPS_PROXY": "http://127.0.0.1:8907/"
+	}
+}
